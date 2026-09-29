@@ -163,7 +163,7 @@ export default function WatchlistPage() {
       const matchesSearch =
         !searchQuery ||
         w.media.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.media.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()));
+        w.media.genres?.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesGenre =
         selectedGenre === 'all' ||
@@ -182,7 +182,7 @@ export default function WatchlistPage() {
       const matchesSearch =
         !searchQuery ||
         w.media.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.media.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()));
+        w.media.genres?.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesGenre =
         selectedGenre === 'all' ||

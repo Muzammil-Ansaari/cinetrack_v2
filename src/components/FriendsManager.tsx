@@ -300,9 +300,6 @@ export default function FriendsManager() {
       if (res.ok && data.success) {
         showToast(`Removed ${friendName} from your friends list.`, 'info', 'Friend Removed');
         setFriends((prev) => prev.filter((f) => f.id !== friendId));
-        if (selectedFriend?.id === friendId) {
-          setSelectedFriend(null);
-        }
       } else {
         showToast(data.error || 'Failed to remove friend.', 'error');
       }
