@@ -121,20 +121,20 @@ export default function HeroSlider({ items }: HeroSliderProps) {
           {(() => {
             const isUnreleased = current.isUpcoming || (current.releaseDate ? new Date(current.releaseDate) > new Date() : false);
             return (
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex items-center gap-1.5 sm:gap-3 pt-2 overflow-x-auto no-scrollbar max-w-full">
                 {!isUnreleased ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       playMedia(current);
                     }}
-                    className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-6 py-3 rounded-full text-sm sm:text-base shadow-xl shadow-red-600/30 hover:scale-105 transition-all"
+                    className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-3.5 py-2 sm:px-6 sm:py-3 rounded-full text-xs sm:text-base shadow-xl shadow-red-600/30 hover:scale-105 transition-all cursor-pointer shrink-0"
                   >
-                    <Play className="w-5 h-5 fill-white" />
-                    <span>Play Now</span>
+                    <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white" />
+                    <span>Play</span>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold px-6 py-3 rounded-full text-sm sm:text-base backdrop-blur-md">
+                  <div className="flex items-center gap-1.5 sm:gap-2 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold px-3.5 py-2 sm:px-6 sm:py-3 rounded-full text-xs sm:text-base backdrop-blur-md shrink-0">
                     <span>Coming Soon</span>
                   </div>
                 )}
@@ -144,23 +144,23 @@ export default function HeroSlider({ items }: HeroSliderProps) {
                 e.stopPropagation();
                 inWatchlist ? removeFromWatchlist(current.internalId) : addToWatchlist(current);
               }}
-              className={`flex items-center gap-2 font-medium px-5 py-3 rounded-full text-sm sm:text-base backdrop-blur-md border transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 font-medium px-3 py-2 sm:px-5 sm:py-3 rounded-full text-xs sm:text-base backdrop-blur-md border transition-all cursor-pointer shrink-0 ${
                 inWatchlist
                   ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300 hover:bg-emerald-600/40'
                   : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
               }`}
             >
-              {inWatchlist ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-              <span>{inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}</span>
+              {inWatchlist ? <Check className="w-3.5 h-3.5 sm:w-5 sm:h-5" /> : <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+              <span>{inWatchlist ? 'Saved' : 'Watchlist'}</span>
             </button>
 
             <Link
               href={`/${current.type}/${current.internalId}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 font-medium px-5 py-3 rounded-full text-sm sm:text-base backdrop-blur-md transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 font-medium px-3 py-2 sm:px-5 sm:py-3 rounded-full text-xs sm:text-base backdrop-blur-md transition-all shrink-0"
             >
-              <Info className="w-5 h-5 text-slate-300" />
-              <span>More Details</span>
+              <Info className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-slate-300" />
+              <span>Details</span>
             </Link>
           </div>
         );

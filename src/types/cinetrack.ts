@@ -7,6 +7,26 @@ export interface CastMember {
   profilePath?: string;
 }
 
+export interface ActorItem {
+  id: number;
+  name: string;
+  profilePath?: string;
+  knownForDepartment?: string;
+  knownForTitles?: string[];
+  popularity?: number;
+}
+
+export interface ActorDetails {
+  id: number;
+  name: string;
+  biography?: string;
+  profilePath?: string;
+  birthday?: string;
+  placeOfBirth?: string;
+  knownForDepartment?: string;
+  popularity?: number;
+}
+
 export interface Episode {
   id: number;
   seasonNumber: number;
@@ -88,6 +108,7 @@ export interface UserProfile {
   avatar?: string;
   isAdmin?: boolean;
   friendTag?: string;
+  tagLastChangedAt?: string | Date | null;
   watchlist?: WatchItem[];
   history?: PlaybackProgress[];
 }

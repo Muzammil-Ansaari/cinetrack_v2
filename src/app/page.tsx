@@ -67,8 +67,8 @@ export default function HomePage() {
     return (
       <div className="w-full h-[70vh] flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm font-semibold tracking-wider uppercase">
-          Fetching live TMDB catalog & latest releases...
+        <p className="text-slate-300 text-xs sm:text-sm font-extrabold tracking-widest uppercase bg-gradient-to-r from-white via-slate-200 to-red-500 bg-clip-text text-transparent">
+          CURATING YOUR PERSONALIZED CINEMA EXPERIENCE...
         </p>
       </div>
     );

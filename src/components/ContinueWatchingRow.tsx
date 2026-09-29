@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Play, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, X, Check, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { MediaItem } from '@/types/cinetrack';
 
 export default function ContinueWatchingRow() {
-  const { history, playMedia, catalog, removeFromHistory } = useApp();
+  const { history, playMedia, catalog, removeFromHistory, updatePlaybackProgress, addToWatchlist, markAsUnwatched, isInWatchlist } = useApp();
   const { ref: scrollRef, events, isDragging } = useDragScroll<HTMLDivElement>();
 
   const scroll = (direction: 'left' | 'right') => {
@@ -124,13 +124,53 @@ export default function ContinueWatchingRow() {
               onClick={handlePlayClick}
               className="group relative flex-none w-64 sm:w-72 rounded-2xl overflow-hidden glass-panel border border-white/10 hover:border-amber-500/50 transition-all duration-300 cursor-pointer"
             >
+              {/* Quick Status Buttons: Watched & Unwatched */}
+              <div className="absolute top-2 left-2 flex items-center gap-1 z-20">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const dur = item.duration || 7200;
+                    updatePlaybackProgress(media, dur, dur);
+                    addToWatchlist(media, true);
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md border transition-all flex items-center gap-1 cursor-pointer ${
+                    isWatched
+                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-950/40'
+                      : 'bg-black/75 hover:bg-emerald-600 text-slate-200 hover:text-white border-white/15 hover:border-emerald-500'
+                  }`}
+                  title="Mark as Watched"
+                >
+                  <Check className="w-3 h-3 text-emerald-400 group-hover:text-white" />
+                  <span>Watched</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updatePlaybackProgress(media, 0, item.duration || 7200);
+                    if (isInWatchlist(media.internalId)) {
+                      markAsUnwatched(media.internalId);
+                    }
+                  }}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold backdrop-blur-md border transition-all flex items-center gap-1 cursor-pointer ${
+                    !isWatched && item.currentTime === 0
+                      ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-950/40'
+                      : 'bg-black/75 hover:bg-amber-600 text-slate-200 hover:text-white border-white/15 hover:border-amber-500'
+                  }`}
+                  title="Mark as Unwatched"
+                >
+                  <RotateCcw className="w-3 h-3 text-amber-400 group-hover:text-white" />
+                  <span>Unwatched</span>
+                </button>
+              </div>
+
               {/* Remove (Delete) Button */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   removeFromHistory(item.mediaId);
                 }}
-                className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 hover:bg-red-600 text-slate-300 hover:text-white border border-white/10 backdrop-blur-md transition-all z-20"
+                className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/75 hover:bg-red-600 text-slate-300 hover:text-white border border-white/15 backdrop-blur-md transition-all z-20 cursor-pointer"
                 title="Remove from Continue Watching"
               >
                 <X className="w-3.5 h-3.5" />

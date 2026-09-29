@@ -79,6 +79,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       friendTag: currentUser.friendTag,
+      tagLastChangedAt: currentUser.tagLastChangedAt,
       friends: formattedFriends,
       friendRequests: currentUser.friendRequests || [],
     });

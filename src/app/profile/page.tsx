@@ -24,10 +24,26 @@ import {
   Search,
   Users,
   BarChart3,
+  Camera,
+  Upload,
+  Link as LinkIcon,
+  X,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { MediaItem } from '@/types/cinetrack';
+import { filterItemByTimeframe, TimeframeFilter } from '@/lib/tmdb';
 import FriendsManager from '@/components/FriendsManager';
+
+const PRESET_AVATARS = [
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1566492031773-4f4e44671857?q=80&w=200&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=200&auto=format&fit=crop',
+];
 
 export default function UserDashboardPage() {
   const {
@@ -41,11 +57,21 @@ export default function UserDashboardPage() {
     removeFromWatchlist,
     playMedia,
     openSearch,
+    updateUserAvatar,
   } = useApp();
 
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'watched' | 'unwatched' | 'upcoming'>('watched');
   const [dashboardSection, setDashboardSection] = useState<'analytics' | 'friends'>('analytics');
+  const [profileTimeframe, setProfileTimeframe] = useState<TimeframeFilter>('all');
+  const [profileCustomStartDate, setProfileCustomStartDate] = useState<string>('');
+  const [profileCustomEndDate, setProfileCustomEndDate] = useState<string>('');
+
+  // Profile Picture Editor States
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarUrlInput, setAvatarUrlInput] = useState('');
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [customAvatarPreview, setCustomAvatarPreview] = useState<string | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
@@ -144,6 +170,35 @@ export default function UserDashboardPage() {
     };
   }, [watchlist, todayStr]);
 
+  const activeTabList =
+    activeTab === 'watched'
+      ? stats.watchedList
+      : activeTab === 'unwatched'
+      ? stats.unwatchedList
+      : stats.upcomingList;
+
+  const filteredTabList = useMemo(() => {
+    return activeTabList.filter((item) => {
+      const targetDate = item.isWatched ? (item.watchedAt || item.addedAt) : item.addedAt;
+      return filterItemByTimeframe(targetDate, profileTimeframe, profileCustomStartDate, profileCustomEndDate);
+    });
+  }, [activeTabList, profileTimeframe, profileCustomStartDate, profileCustomEndDate]);
+
+  const profileFilteredCounts = useMemo(() => {
+    const calc = (list: typeof watchlist) => {
+      return list.filter((item) => {
+        const targetDate = item.isWatched ? (item.watchedAt || item.addedAt) : item.addedAt;
+        return filterItemByTimeframe(targetDate, profileTimeframe, profileCustomStartDate, profileCustomEndDate);
+      }).length;
+    };
+
+    return {
+      watched: calc(stats.watchedList),
+      unwatched: calc(stats.unwatchedList),
+      upcoming: calc(stats.upcomingList),
+    };
+  }, [stats, profileTimeframe, profileCustomStartDate, profileCustomEndDate]);
+
   // Skeleton / Loading guard while client hydration & auth session resolution takes place
   if (!mounted || authLoading) {
     return (
@@ -195,12 +250,7 @@ export default function UserDashboardPage() {
     );
   }
 
-  const activeTabList =
-    activeTab === 'watched'
-      ? stats.watchedList
-      : activeTab === 'unwatched'
-      ? stats.unwatchedList
-      : stats.upcomingList;
+
 
   return (
     <div className="pt-24 pb-20 min-h-screen">
@@ -212,18 +262,28 @@ export default function UserDashboardPage() {
           
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-              {/* Avatar */}
-              <div className="relative group">
-                <div className="w-24 h-24 rounded-3xl p-1 bg-gradient-to-tr from-red-600 via-rose-500 to-amber-400 shadow-xl shadow-red-600/20">
+              {/* Interactive Editable Avatar */}
+              <div
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="relative group cursor-pointer"
+                title="Click to change profile picture"
+              >
+                <div className="w-24 h-24 rounded-3xl p-1 bg-gradient-to-tr from-red-600 via-rose-500 to-amber-400 shadow-xl shadow-red-600/20 relative overflow-hidden">
                   {/* eslint-disable-next-img-element */}
                   <img
                     src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
                     alt={user?.name || 'User Avatar'}
-                    className="w-full h-full object-cover rounded-[22px]"
+                    className="w-full h-full object-cover rounded-[22px] group-hover:scale-105 transition-transform"
                   />
+                  {/* Camera Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center rounded-[22px] text-white">
+                    <Camera className="w-6 h-6 text-white mb-0.5" />
+                    <span className="text-[10px] font-bold">Edit Photo</span>
+                  </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-slate-900 shadow" title="Active Account">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+
+                <div className="absolute -bottom-1 -right-1 bg-red-600 text-white p-1.5 rounded-full border-2 border-slate-900 shadow group-hover:scale-110 transition-transform" title="Change Profile Picture">
+                  <Camera className="w-3.5 h-3.5" />
                 </div>
               </div>
 
@@ -510,48 +570,92 @@ export default function UserDashboardPage() {
                   <span>Watchlist Quick Overview</span>
                 </h3>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl">
-                  <button
-                    onClick={() => setActiveTab('watched')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      activeTab === 'watched'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Watched ({stats.watchedList.length})</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('unwatched')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      activeTab === 'unwatched'
-                        ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Unwatched ({stats.unwatchedList.length})</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('upcoming')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      activeTab === 'upcoming'
-                        ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Upcoming ({stats.upcomingList.length})</span>
-                  </button>
+                {/* Tabs & Timeframe Selector */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl">
+                    <button
+                      onClick={() => setActiveTab('watched')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        activeTab === 'watched'
+                          ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Watched ({profileFilteredCounts.watched})</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('unwatched')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        activeTab === 'unwatched'
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Unwatched ({profileFilteredCounts.unwatched})</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('upcoming')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        activeTab === 'upcoming'
+                          ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Upcoming ({profileFilteredCounts.upcoming})</span>
+                    </button>
+                  </div>
+
+                  {/* Timeframe Filter Selector */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
+                      <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                      <select
+                        value={profileTimeframe}
+                        onChange={(e) => setProfileTimeframe(e.target.value as TimeframeFilter)}
+                        className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
+                      >
+                        <option value="all">All Time</option>
+                        <option value="today">Added Today</option>
+                        <option value="yesterday">Added Yesterday</option>
+                        <option value="7days">Last 7 Days</option>
+                        <option value="this_month">This Month</option>
+                        <option value="custom">Custom Range...</option>
+                      </select>
+                    </div>
+
+                    {profileTimeframe === 'custom' && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] text-slate-400 font-bold uppercase">From:</span>
+                          <input
+                            type="date"
+                            value={profileCustomStartDate}
+                            onChange={(e) => setProfileCustomStartDate(e.target.value)}
+                            className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] text-slate-400 font-bold uppercase">To:</span>
+                          <input
+                            type="date"
+                            value={profileCustomEndDate}
+                            onChange={(e) => setProfileCustomEndDate(e.target.value)}
+                            className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Tab Content Grid */}
-              {activeTabList.length === 0 ? (
+              {filteredTabList.length === 0 ? (
                 <div className="text-center py-12 space-y-3">
-                  <p className="text-sm text-slate-400">No items found in this category.</p>
+                  <p className="text-sm text-slate-400">No items found matching selected timeframe.</p>
                   <button
                     onClick={openSearch}
                     className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all cursor-pointer"
@@ -562,7 +666,7 @@ export default function UserDashboardPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {activeTabList.slice(0, 12).map(({ media, id, isWatched }) => {
+                  {filteredTabList.slice(0, 12).map(({ media, id, isWatched }) => {
                     const isFuture = (media.releaseDate || '') > todayStr || (media.isUpcoming && (media.releaseDate || '') > todayStr);
 
                     return (
@@ -653,7 +757,147 @@ export default function UserDashboardPage() {
             </div>
           </>
         )}
-      </div>
+      {/* Change Profile Picture Modal */}
+      {isAvatarModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-white/20 rounded-3xl p-6 max-w-md w-full space-y-6 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-red-500" />
+                <h3 className="text-lg font-bold text-white">Change Profile Picture</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsAvatarModalOpen(false);
+                  setCustomAvatarPreview(null);
+                  setAvatarUrlInput('');
+                }}
+                className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current / Selected Avatar Preview */}
+            <div className="text-center space-y-2">
+              <div className="w-24 h-24 mx-auto rounded-3xl p-1 bg-gradient-to-tr from-red-600 via-rose-500 to-amber-400 shadow-xl shadow-red-600/30">
+                <img
+                  src={customAvatarPreview || avatarUrlInput || user?.avatar || PRESET_AVATARS[0]}
+                  alt="Avatar Preview"
+                  className="w-full h-full object-cover rounded-[22px]"
+                />
+              </div>
+              <p className="text-xs text-slate-400 font-medium">Profile Picture Preview</p>
+            </div>
+
+            {/* Option A: Upload Local Image File */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 block">Upload Image from Device</label>
+              <label className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold cursor-pointer transition-all">
+                <Upload className="w-4 h-4 text-red-400" />
+                <span>Choose Image File</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        if (evt.target?.result) {
+                          const base64Str = evt.target.result as string;
+                          setCustomAvatarPreview(base64Str);
+                          setAvatarUrlInput('');
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Option B: Enter Image URL */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 block">Or Paste Image URL</label>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                <LinkIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="https://images.unsplash.com/photo-1535713875002..."
+                  value={avatarUrlInput}
+                  onChange={(e) => {
+                    setAvatarUrlInput(e.target.value);
+                    if (e.target.value.trim()) {
+                      setCustomAvatarPreview(e.target.value.trim());
+                    }
+                  }}
+                  className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Option C: Preset Avatars Grid */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 block">Or Select a Preset Avatar</label>
+              <div className="grid grid-cols-4 gap-2.5">
+                {PRESET_AVATARS.map((url, idx) => {
+                  const isSelected = (customAvatarPreview || user?.avatar) === url;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setCustomAvatarPreview(url);
+                        setAvatarUrlInput('');
+                      }}
+                      className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                        isSelected ? 'border-red-500 scale-105 shadow-lg shadow-red-600/40' : 'border-white/10 hover:border-white/40'
+                      }`}
+                    >
+                      <img src={url} alt={`Preset ${idx}`} className="w-full h-full object-cover" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAvatarModalOpen(false);
+                  setCustomAvatarPreview(null);
+                  setAvatarUrlInput('');
+                }}
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={avatarSaving}
+                onClick={async () => {
+                  const targetUrl = customAvatarPreview || avatarUrlInput.trim() || user?.avatar;
+                  if (targetUrl) {
+                    setAvatarSaving(true);
+                    await updateUserAvatar(targetUrl);
+                    setAvatarSaving(false);
+                    setIsAvatarModalOpen(false);
+                  }
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-red-600/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {avatarSaving ? 'Saving...' : 'Save Picture'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 }

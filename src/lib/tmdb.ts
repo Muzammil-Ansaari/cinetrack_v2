@@ -1,4 +1,4 @@
-import { MediaItem, Season, Episode, CastMember } from '@/types/cinetrack';
+import { MediaItem, Season, Episode, CastMember, ActorItem, ActorDetails } from '@/types/cinetrack';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || '46b64310f8c3347203f4780bbac0144d';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -266,32 +266,112 @@ export async function getItemsByGenre(genre: string, type: 'movie' | 'tv' = 'mov
   return MOCK_MEDIA_ITEMS.filter((item) => item.type === type);
 }
 
-export async function searchMedia(query: string): Promise<MediaItem[]> {
-  if (!query.trim()) return [];
-  const data = await fetchFromTMDB('/search/multi', { query });
-  if (data && data.results && data.results.length > 0) {
-    return data.results
-      .filter((i: any) => i.media_type === 'movie' || i.media_type === 'tv')
-      .slice(0, 15)
-      .map((item: any) => formatTmdbItem(item));
+export interface SearchResponse {
+  items: MediaItem[];
+  page: number;
+  totalPages: number;
+  totalResults: number;
+}
+
+export async function searchMedia(query: string, page: number = 1): Promise<SearchResponse> {
+  if (!query.trim()) {
+    return { items: [], page: 1, totalPages: 1, totalResults: 0 };
   }
 
+  const data = await fetchFromTMDB('/search/multi', { query, page: page.toString() });
+  const resultsMap = new Map<string, MediaItem>();
+
+  if (data && data.results && data.results.length > 0) {
+    for (const item of data.results) {
+      if (item.media_type === 'movie' || item.media_type === 'tv') {
+        const formatted = formatTmdbItem(item);
+        if (!resultsMap.has(formatted.internalId)) {
+          resultsMap.set(formatted.internalId, formatted);
+        }
+      } else if (item.media_type === 'person' && item.known_for && Array.isArray(item.known_for)) {
+        for (const k of item.known_for) {
+          if (k.media_type === 'movie' || k.media_type === 'tv') {
+            const formatted = formatTmdbItem(k);
+            if (!resultsMap.has(formatted.internalId)) {
+              resultsMap.set(formatted.internalId, formatted);
+            }
+          }
+        }
+      }
+    }
+
+    const items = Array.from(resultsMap.values());
+    const totalPages = Math.min(data.total_pages || 1, 50);
+    const totalResults = data.total_results || items.length;
+
+    return {
+      items,
+      page: data.page || page,
+      totalPages,
+      totalResults,
+    };
+  }
+
+  // Fallback to local mock data matching title, cast names, or director
   const q = query.toLowerCase();
-  return MOCK_MEDIA_ITEMS.filter(
+  const matched = MOCK_MEDIA_ITEMS.filter(
     (item) =>
       item.title.toLowerCase().includes(q) ||
-      item.genres.some((g) => g.toLowerCase().includes(q))
+      (item.cast && item.cast.some((c) => c.name.toLowerCase().includes(q))) ||
+      (item.director && item.director.toLowerCase().includes(q))
   );
+
+  return {
+    items: matched,
+    page: 1,
+    totalPages: 1,
+    totalResults: matched.length,
+  };
 }
 
 export async function getMediaDetails(id: string): Promise<MediaItem | undefined> {
-  const [type, rawId] = id.split('-');
-  const tmdbId = rawId || id;
-  const endpoint = type === 'tv' ? `/tv/${tmdbId}` : `/movie/${tmdbId}`;
+  let targetType: 'movie' | 'tv' = id.startsWith('tv-') ? 'tv' : 'movie';
+  let targetTmdbId: string | number | null = null;
 
-  const data = await fetchFromTMDB(endpoint, { append_to_response: 'credits,videos' });
+  if (id.startsWith('tv-') || id.startsWith('movie-')) {
+    targetType = id.startsWith('tv-') ? 'tv' : 'movie';
+    targetTmdbId = id.replace(/^(movie|tv)-/, '');
+  } else if (/^\d+$/.test(id)) {
+    targetTmdbId = id;
+  }
+
+  let data: any = null;
+
+  if (targetTmdbId) {
+    const endpoint = targetType === 'tv' ? `/tv/${targetTmdbId}` : `/movie/${targetTmdbId}`;
+    data = await fetchFromTMDB(endpoint, { append_to_response: 'credits,videos' });
+
+    // Fallback: If movie endpoint returned null and no explicit type was given, try TV show endpoint
+    if (!data && !id.startsWith('movie-')) {
+      const tvData = await fetchFromTMDB(`/tv/${targetTmdbId}`, { append_to_response: 'credits,videos' });
+      if (tvData) {
+        data = tvData;
+        targetType = 'tv';
+      }
+    }
+  }
+
+  // Fallback 2: Search TMDB by query (e.g. if id is non-numeric title, name, or UUID)
+  if (!data && id) {
+    const searchRes = await fetchFromTMDB('/search/multi', { query: id });
+    if (searchRes && searchRes.results && searchRes.results.length > 0) {
+      const firstMatch = searchRes.results.find((r: any) => r.media_type === 'movie' || r.media_type === 'tv') || searchRes.results[0];
+      if (firstMatch) {
+        targetType = firstMatch.media_type === 'tv' ? 'tv' : 'movie';
+        targetTmdbId = firstMatch.id;
+        const endpoint = targetType === 'tv' ? `/tv/${targetTmdbId}` : `/movie/${targetTmdbId}`;
+        data = await fetchFromTMDB(endpoint, { append_to_response: 'credits,videos' });
+      }
+    }
+  }
+
   if (data) {
-    const item = formatTmdbItem(data, type === 'tv' ? 'tv' : 'movie');
+    const item = formatTmdbItem(data, targetType);
 
     // Parse cast with profile images
     if (data.credits && data.credits.cast) {
@@ -316,7 +396,7 @@ export async function getMediaDetails(id: string): Promise<MediaItem | undefined
     }
 
     // Parse seasons if TV
-    if (type === 'tv' && data.seasons) {
+    if (targetType === 'tv' && data.seasons) {
       const validSeasons = data.seasons.filter((s: any) => s.season_number > 0);
       const seasonsToUse = validSeasons.length > 0 ? validSeasons : data.seasons;
 
@@ -420,4 +500,132 @@ export function getEmbedUrl(media: MediaItem, episode?: Episode, startTime: numb
 
   const queryString = queryParams.toString();
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+}
+
+export async function searchActors(query: string): Promise<ActorItem[]> {
+  if (!query.trim()) return [];
+  const data = await fetchFromTMDB('/search/person', { query });
+  if (data && data.results && data.results.length > 0) {
+    return data.results.slice(0, 8).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      profilePath: p.profile_path ? `https://image.tmdb.org/t/p/w500${p.profile_path}` : undefined,
+      knownForDepartment: p.known_for_department || 'Acting',
+      knownForTitles: p.known_for
+        ? p.known_for.map((k: any) => k.title || k.name).filter(Boolean)
+        : [],
+      popularity: p.popularity,
+    }));
+  }
+  return [];
+}
+
+export async function getActorDetails(actorId: string | number): Promise<{
+  actor: ActorDetails;
+  filmography: MediaItem[];
+} | null> {
+  const cleanId = actorId.toString().split('-')[0];
+  const [personData, creditsData] = await Promise.all([
+    fetchFromTMDB(`/person/${cleanId}`),
+    fetchFromTMDB(`/person/${cleanId}/combined_credits`),
+  ]);
+
+  if (!personData) return null;
+
+  const actor: ActorDetails = {
+    id: personData.id,
+    name: personData.name,
+    biography: personData.biography,
+    profilePath: personData.profile_path ? `https://image.tmdb.org/t/p/w500${personData.profile_path}` : undefined,
+    birthday: personData.birthday,
+    placeOfBirth: personData.place_of_birth,
+    knownForDepartment: personData.known_for_department || 'Acting',
+    popularity: personData.popularity,
+  };
+
+  const filmographyMap = new Map<string, MediaItem>();
+
+  if (creditsData && creditsData.cast && Array.isArray(creditsData.cast)) {
+    const sorted = creditsData.cast
+      .filter((c: any) => (c.poster_path || c.backdrop_path) && (c.media_type === 'movie' || c.media_type === 'tv'))
+      .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0));
+
+    for (const item of sorted) {
+      const mediaType = item.media_type === 'tv' ? 'tv' : 'movie';
+      const formatted = formatTmdbItem(item, mediaType);
+      if (!filmographyMap.has(formatted.internalId)) {
+        filmographyMap.set(formatted.internalId, formatted);
+      }
+    }
+  }
+
+  return {
+    actor,
+    filmography: Array.from(filmographyMap.values()),
+  };
+}
+
+export type TimeframeFilter = 'all' | 'today' | 'yesterday' | '7days' | 'this_month' | 'custom';
+
+export function filterItemByTimeframe(
+  itemDateStr?: string | Date,
+  timeframe: TimeframeFilter = 'all',
+  customStartDate?: string,
+  customEndDate?: string
+): boolean {
+  if (timeframe === 'all' || !itemDateStr) return true;
+
+  const itemDate = new Date(itemDateStr);
+  if (isNaN(itemDate.getTime())) return true;
+
+  const now = new Date();
+
+  // Midnight today
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Midnight yesterday
+  const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+
+  // 7 days ago midnight
+  const startOf7Days = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+
+  // Start of current month midnight
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  switch (timeframe) {
+    case 'today':
+      return itemDate >= startOfToday;
+    case 'yesterday':
+      return itemDate >= startOfYesterday && itemDate < startOfToday;
+    case '7days':
+      return itemDate >= startOf7Days;
+    case 'this_month':
+      return itemDate >= startOfMonth;
+    case 'custom': {
+      if (!customStartDate && !customEndDate) return true;
+
+      let passesStart = true;
+      let passesEnd = true;
+
+      if (customStartDate) {
+        const start = new Date(customStartDate);
+        if (!isNaN(start.getTime())) {
+          const startBoundary = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          passesStart = itemDate >= startBoundary;
+        }
+      }
+
+      if (customEndDate) {
+        const end = new Date(customEndDate);
+        if (!isNaN(end.getTime())) {
+          const endBoundary = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+          passesEnd = itemDate < endBoundary;
+        }
+      }
+
+      return passesStart && passesEnd;
+    }
+    default:
+      return true;
+  }
 }

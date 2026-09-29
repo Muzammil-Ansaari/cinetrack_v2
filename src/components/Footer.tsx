@@ -4,7 +4,7 @@ import { Film, Globe, Share2, Heart } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-slate-950/80 backdrop-blur-xl text-slate-400 py-12 px-4 sm:px-6 lg:px-8 mt-20">
+    <footer className="border-t border-white/10 bg-slate-950/80 backdrop-blur-xl text-slate-400 py-12 px-4 sm:px-6 lg:px-8 mt-20 mb-16 lg:mb-0">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="space-y-4 md:col-span-1">
           <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export default function Footer() {
         <div>
           <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Powered By</h4>
           <p className="text-xs text-slate-400 mb-3">
-            Metadata powered by TMDB API. Video playback engineered with HTML5 & HLS stream players.
+            Powered by Cinetrack Real-Time Cinema Engine. Video playback engineered with ultra-fast streaming.
           </p>
           <div className="flex items-center gap-3">
             <a href="https://cinetrack.app" target="_blank" rel="noreferrer" className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-300 hover:text-white transition-colors" title="Official Website">

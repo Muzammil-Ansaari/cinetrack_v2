@@ -3,7 +3,6 @@ import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import GlobalSearchModal from '@/components/GlobalSearchModal';
 import VideoPlayerModal from '@/components/VideoPlayerModal';
 import AuthModal from '@/components/AuthModal';
 import AuthGuard from '@/components/AuthGuard';
@@ -26,11 +25,10 @@ export default function RootLayout({
         <ToastProvider>
           <AppProvider>
             <Navbar />
-            <main className="flex-1 w-full">
+            <main className="flex-1 w-full pb-16 lg:pb-0">
               <AuthGuard>{children}</AuthGuard>
             </main>
             <Footer />
-            <GlobalSearchModal />
             <VideoPlayerModal />
             <AuthModal />
           </AppProvider>

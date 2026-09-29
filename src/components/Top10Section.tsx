@@ -131,8 +131,8 @@ export default function Top10Section({ items, title = 'Top 10 New Releases' }: T
                   <span>{item.rating.toFixed(1)}</span>
                 </div>
 
-                {/* Hover Action Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                {/* Action Overlay (Always visible on mobile/touch, hover-triggered on desktop) */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
                   <h4 className="text-sm font-bold text-white line-clamp-1 select-none">{item.title}</h4>
                   <p className="text-[11px] font-semibold text-amber-400 mb-1 flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-amber-400" />

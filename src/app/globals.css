@@ -67,6 +67,26 @@
   background: #3b3f54;
 }
 
+/* Visible Custom scrollbar for modals & search results */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(229, 9, 20, 0.6) rgba(255, 255, 255, 0.05);
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(229, 9, 20, 0.6);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(229, 9, 20, 0.9);
+}
+
 /* Custom rank number gradient for Top 10 */
 .text-stroke-rank {
   -webkit-text-stroke: 2px rgba(255, 255, 255, 0.3);

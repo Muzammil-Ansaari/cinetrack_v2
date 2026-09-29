@@ -25,16 +25,22 @@ import {
   SlidersHorizontal,
   Upload,
   FileText,
+  Users,
   X,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/context/ToastContext';
+import { filterItemByTimeframe, TimeframeFilter } from '@/lib/tmdb';
+import { FriendUser } from '@/components/FriendsManager';
 
 export default function WatchlistPage() {
   const { showToast } = useToast();
   const {
     watchlist,
+    addToWatchlist,
     removeFromWatchlist,
+    isInWatchlist,
+    isWatched,
     markAsWatched,
     markAsUnwatched,
     playMedia,
@@ -47,87 +53,75 @@ export default function WatchlistPage() {
   const [activeMainTab, setActiveMainTab] = useState<'unwatched' | 'watched' | 'upcoming'>('unwatched');
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'movie' | 'tv'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeframeFilter>('all');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
 
-  // Import v1 Data Modal State
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [jsonInput, setJsonInput] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
+  // Watchlist Source State (My Watchlist vs Friend's Watchlist)
+  const [friendsList, setFriendsList] = useState<FriendUser[]>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string>('me');
+  const [loadingFriends, setLoadingFriends] = useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleLoadSampleJSON = () => {
-    const sample = {
-      watched: [
-        { title: 'Inception', releaseYear: 2010, rating: 8.8, type: 'movie', genres: ['Sci-Fi', 'Action'] },
-        { title: 'Breaking Bad', releaseYear: 2008, rating: 9.5, type: 'tv', genres: ['Drama', "Crime"] }
-      ],
-      unwatched: [
-        { title: 'The Dark Knight', releaseYear: 2008, rating: 9.0, type: 'movie', genres: ['Action', 'Drama'] }
-      ],
-      upcoming: [
-        { title: 'Avatar 3', releaseDate: '2026-12-18', type: 'movie', isUpcoming: true, genres: ['Sci-Fi', 'Adventure'] }
-      ]
-    };
-    setJsonInput(JSON.stringify(sample, null, 2));
-    setImportError(null);
-  };
-
-  const handleImportJSON = async () => {
-    if (!jsonInput.trim()) return;
-    try {
-      setImporting(true);
-      setImportError(null);
-      const parsed = JSON.parse(jsonInput);
-
+  // Fetch Friends List to allow inspecting friends' watchlists with all filters
+  React.useEffect(() => {
+    const fetchFriends = async () => {
       const token = localStorage.getItem('cinetrack_token');
-      const res = await fetch('/api/user/import-watchlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(parsed),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setImportError(data.error || 'Failed to import watchlist data.');
-        return;
+      if (!token) return;
+      try {
+        setLoadingFriends(true);
+        const res = await fetch('/api/friends', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setFriendsList(data.friends || []);
+        }
+      } catch (err) {
+        console.error('Failed to load friends for watchlist page:', err);
+      } finally {
+        setLoadingFriends(false);
       }
+    };
 
-      showToast(data.message || 'Data imported successfully!', 'success', 'Import Complete');
-      setIsImportModalOpen(false);
-      setJsonInput('');
-
-      // Refresh page to sync state
-      window.location.reload();
-    } catch (err: any) {
-      setImportError(`Invalid JSON format: ${err.message}`);
-    } finally {
-      setImporting(false);
+    if (user) {
+      fetchFriends();
     }
-  };
+  }, [user]);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Categorize Watchlist Items
+  // Active Friend Selected
+  const selectedFriend = useMemo(() => {
+    if (selectedFriendId === 'me') return null;
+    return friendsList.find((f) => f.id === selectedFriendId) || null;
+  }, [selectedFriendId, friendsList]);
+
+  // Target Watchlist Array (My Watchlist or Friend's Watchlist)
+  const activeWatchlist = useMemo(() => {
+    if (selectedFriend) {
+      return selectedFriend.watchlist || [];
+    }
+    return watchlist;
+  }, [selectedFriend, watchlist]);
+
+  // Categorize Active Watchlist Items (Unwatched, Watched, Upcoming)
   const categorized = useMemo(() => {
-    const watched = watchlist.filter((w) => w.isWatched === true);
+    const watched = activeWatchlist.filter((w) => w.isWatched === true);
 
-    const unwatched: typeof watchlist = [];
-    const upcoming: typeof watchlist = [];
+    const unwatched: typeof activeWatchlist = [];
+    const upcoming: typeof activeWatchlist = [];
 
-    watchlist.forEach((w) => {
+    activeWatchlist.forEach((w) => {
       if (w.isWatched) return;
 
-      const releaseDate = w.media.releaseDate || '';
-      const isFutureRelease = releaseDate > todayStr || (w.media.isUpcoming && releaseDate > todayStr);
+      const releaseDate = w.media?.releaseDate || '';
+      const isFutureRelease = releaseDate > todayStr || (w.media?.isUpcoming && releaseDate > todayStr);
 
       if (isFutureRelease) {
         upcoming.push(w);
@@ -137,15 +131,19 @@ export default function WatchlistPage() {
     });
 
     return { unwatched, watched, upcoming };
-  }, [watchlist, todayStr]);
+  }, [activeWatchlist, todayStr]);
 
-  // Select items for the active tab
-  const currentTabItems = categorized[activeMainTab];
+  // Items for the selected main tab (Unwatched | Watched | Upcoming)
+  const currentTabItems = useMemo(() => {
+    if (activeMainTab === 'watched') return categorized.watched;
+    if (activeMainTab === 'upcoming') return categorized.upcoming;
+    return categorized.unwatched;
+  }, [activeMainTab, categorized]);
 
-  // Extract all unique genres dynamically from the user's watchlist
+  // Extract all unique genres dynamically from target watchlist
   const availableGenres = useMemo(() => {
     const genreSet = new Set<string>();
-    watchlist.forEach((w) => {
+    activeWatchlist.forEach((w) => {
       if (w.media?.genres && Array.isArray(w.media.genres)) {
         w.media.genres.forEach((g) => {
           if (g && typeof g === 'string') {
@@ -155,21 +153,9 @@ export default function WatchlistPage() {
       }
     });
     return Array.from(genreSet).sort();
-  }, [watchlist]);
+  }, [activeWatchlist]);
 
-  // Extract all unique release years dynamically from the user's watchlist
-  const availableYears = useMemo(() => {
-    const yearSet = new Set<string>();
-    watchlist.forEach((w) => {
-      const year = w.media?.releaseYear || (w.media?.releaseDate ? w.media.releaseDate.split('-')[0] : null);
-      if (year) {
-        yearSet.add(year.toString());
-      }
-    });
-    return Array.from(yearSet).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
-  }, [watchlist]);
-
-  // Apply Media Type, Search, Genre, and Year Filters
+  // Apply Media Type, Search, Genre, and Timeframe Filters
   const filteredItems = useMemo(() => {
     return currentTabItems.filter((w) => {
       const matchesType = mediaTypeFilter === 'all' || w.media.type === mediaTypeFilter;
@@ -183,27 +169,81 @@ export default function WatchlistPage() {
         selectedGenre === 'all' ||
         (w.media.genres && w.media.genres.includes(selectedGenre));
 
-      const itemYear = w.media.releaseYear?.toString() || (w.media.releaseDate ? w.media.releaseDate.split('-')[0] : '');
-      const matchesYear = selectedYear === 'all' || itemYear === selectedYear;
+      const targetDate = w.isWatched ? (w.watchedAt || w.addedAt) : w.addedAt;
+      const matchesTimeframe = filterItemByTimeframe(targetDate, selectedTimeframe, customStartDate, customEndDate);
 
-      return matchesType && matchesSearch && matchesGenre && matchesYear;
+      return matchesType && matchesSearch && matchesGenre && matchesTimeframe;
     });
-  }, [currentTabItems, mediaTypeFilter, searchQuery, selectedGenre, selectedYear]);
+  }, [currentTabItems, mediaTypeFilter, searchQuery, selectedGenre, selectedTimeframe, customStartDate, customEndDate]);
+
+  // Media Type breakdown counts for current main tab matching search, genre, and timeframe filters
+  const typeCounts = useMemo(() => {
+    const matchingFiltersWithoutType = currentTabItems.filter((w) => {
+      const matchesSearch =
+        !searchQuery ||
+        w.media.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        w.media.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesGenre =
+        selectedGenre === 'all' ||
+        (w.media.genres && w.media.genres.includes(selectedGenre));
+
+      const targetDate = w.isWatched ? (w.watchedAt || w.addedAt) : w.addedAt;
+      const matchesTimeframe = filterItemByTimeframe(targetDate, selectedTimeframe, customStartDate, customEndDate);
+
+      return matchesSearch && matchesGenre && matchesTimeframe;
+    });
+
+    const all = matchingFiltersWithoutType.length;
+    const movies = matchingFiltersWithoutType.filter((w) => w.media.type === 'movie').length;
+    const tv = matchingFiltersWithoutType.filter((w) => w.media.type === 'tv').length;
+
+    return { all, movies, tv };
+  }, [currentTabItems, searchQuery, selectedGenre, selectedTimeframe, customStartDate, customEndDate]);
+
+  // Main tab counts after applying all active filters
+  const filteredTabCounts = useMemo(() => {
+    const calcCount = (items: typeof watchlist) => {
+      return items.filter((w) => {
+        const matchesType = mediaTypeFilter === 'all' || w.media.type === mediaTypeFilter;
+        const matchesSearch =
+          !searchQuery ||
+          w.media.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          w.media.genres?.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchesGenre =
+          selectedGenre === 'all' ||
+          (w.media.genres && w.media.genres.includes(selectedGenre));
+        const targetDate = w.isWatched ? (w.watchedAt || w.addedAt) : w.addedAt;
+        const matchesTimeframe = filterItemByTimeframe(targetDate, selectedTimeframe, customStartDate, customEndDate);
+
+        return matchesType && matchesSearch && matchesGenre && matchesTimeframe;
+      }).length;
+    };
+
+    return {
+      unwatched: calcCount(categorized.unwatched),
+      watched: calcCount(categorized.watched),
+      upcoming: calcCount(categorized.upcoming),
+    };
+  }, [categorized, mediaTypeFilter, searchQuery, selectedGenre, selectedTimeframe, customStartDate, customEndDate]);
 
   // Pagination (30 items per page)
   const ITEMS_PER_PAGE = 30;
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Reset page pagination on filter state change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeMainTab, mediaTypeFilter, searchQuery, selectedGenre, selectedYear]);
+  }, [activeMainTab, mediaTypeFilter, searchQuery, selectedGenre, selectedTimeframe, selectedFriendId]);
 
   const hasActiveFilters =
-    selectedGenre !== 'all' || selectedYear !== 'all' || mediaTypeFilter !== 'all' || searchQuery !== '';
+    selectedGenre !== 'all' || selectedTimeframe !== 'all' || mediaTypeFilter !== 'all' || searchQuery !== '' || customStartDate !== '' || customEndDate !== '';
 
   const clearAllFilters = () => {
     setSelectedGenre('all');
-    setSelectedYear('all');
+    setSelectedTimeframe('all');
+    setCustomStartDate('');
+    setCustomEndDate('');
     setMediaTypeFilter('all');
     setSearchQuery('');
   };
@@ -270,16 +310,17 @@ export default function WatchlistPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-black text-white tracking-tight">
-                  Watchlist
+                  {selectedFriend ? `${selectedFriend.name}'s Watchlist` : 'Watchlist'}
                 </h1>
               </div>
             </div>
             <p className="text-sm text-slate-400 pl-1">
-              Organize, track, and get notified about your saved movies and TV shows.
+              {selectedFriend
+                ? `Browsing ${selectedFriend.name}'s saved movies and TV shows (${selectedFriend.friendTag}).`
+                : 'Organize, track, and get notified about your saved movies and TV shows.'}
             </p>
           </div>
 
-          {/* Controls: Search & Import v1 Data Button */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
             <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -287,7 +328,7 @@ export default function WatchlistPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter watchlist..."
+                placeholder="Filter titles..."
                 className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-red-500/50 transition-colors"
               />
               {searchQuery && (
@@ -299,15 +340,76 @@ export default function WatchlistPage() {
                 </button>
               )}
             </div>
-
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
-            >
-              <Upload className="w-4 h-4 text-amber-400" />
-              <span>Import v1 Data</span>
-            </button>
           </div>
+        </div>
+
+        {/* Watchlist Source Selector Bar (My Watchlist vs Friends' Watchlists) */}
+        <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5 pr-1">
+              <User className="w-4 h-4 text-red-500" />
+              <span>Watchlist Source:</span>
+            </span>
+
+            {/* My Watchlist Option */}
+            <button
+              onClick={() => setSelectedFriendId('me')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                selectedFriendId === 'me'
+                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30'
+                  : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
+              <span>My Watchlist</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
+                {watchlist.length}
+              </span>
+            </button>
+
+            {/* Friends' Watchlists Options */}
+            {friendsList.map((friend) => (
+              <button
+                key={friend.id}
+                onClick={() => setSelectedFriendId(friend.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  selectedFriendId === friend.id
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/30'
+                    : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {/* eslint-disable-next-img-element */}
+                <img
+                  src={friend.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
+                  alt={friend.name}
+                  className="w-4 h-4 rounded-full object-cover border border-amber-400/50"
+                />
+                <span>{friend.name}&apos;s List</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
+                  {friend.watchlistCount || friend.watchlist?.length || 0}
+                </span>
+              </button>
+            ))}
+
+            {friendsList.length === 0 && !loadingFriends && (
+              <span className="text-xs text-slate-500 italic pl-1">
+                (Add friends in your Profile to view their watchlists here!)
+              </span>
+            )}
+          </div>
+
+          {selectedFriend && (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs text-amber-300">
+              <Users className="w-4 h-4 text-amber-400" />
+              <span>Inspecting <strong>{selectedFriend.name}&apos;s</strong> Watchlist</span>
+              <button
+                onClick={() => setSelectedFriendId('me')}
+                className="ml-2 text-slate-300 hover:text-white underline text-[11px] font-bold cursor-pointer"
+              >
+                Switch to Mine
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Top Level 3 Tabs (Unwatched | Watched | Upcoming) */}
@@ -328,7 +430,7 @@ export default function WatchlistPage() {
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
                 activeMainTab === 'unwatched' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
-                {categorized.unwatched.length}
+                {filteredTabCounts.unwatched}
               </span>
             </button>
 
@@ -346,7 +448,7 @@ export default function WatchlistPage() {
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
                 activeMainTab === 'watched' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
-                {categorized.watched.length}
+                {filteredTabCounts.watched}
               </span>
             </button>
 
@@ -364,7 +466,7 @@ export default function WatchlistPage() {
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
                 activeMainTab === 'upcoming' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
-                {categorized.upcoming.length}
+                {filteredTabCounts.upcoming}
               </span>
             </button>
 
@@ -376,29 +478,38 @@ export default function WatchlistPage() {
             <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 p-1 rounded-xl text-xs">
               <button
                 onClick={() => setMediaTypeFilter('all')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
                   mediaTypeFilter === 'all' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                All
+                <span>All</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
+                  {typeCounts.all}
+                </span>
               </button>
               <button
                 onClick={() => setMediaTypeFilter('movie')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
                   mediaTypeFilter === 'movie' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Film className="w-3.5 h-3.5" />
                 <span>Movies</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
+                  {typeCounts.movies}
+                </span>
               </button>
               <button
                 onClick={() => setMediaTypeFilter('tv')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
                   mediaTypeFilter === 'tv' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Tv className="w-3.5 h-3.5" />
                 <span>TV Shows</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
+                  {typeCounts.tv}
+                </span>
               </button>
             </div>
 
@@ -421,21 +532,46 @@ export default function WatchlistPage() {
                 </select>
               </div>
 
-              {/* Dynamic Year Filter Selector */}
-              <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
-                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
-                >
-                  <option value="all">All Years ({availableYears.length})</option>
-                  {availableYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
+              {/* Timeframe Filter Selector */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  <select
+                    value={selectedTimeframe}
+                    onChange={(e) => setSelectedTimeframe(e.target.value as TimeframeFilter)}
+                    className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="today">Added Today</option>
+                    <option value="yesterday">Added Yesterday</option>
+                    <option value="7days">Last 7 Days</option>
+                    <option value="this_month">This Month</option>
+                    <option value="custom">Custom Range...</option>
+                  </select>
+                </div>
+
+                {selectedTimeframe === 'custom' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400 font-bold uppercase">From:</span>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400 font-bold uppercase">To:</span>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Reset Filters Button */}
@@ -511,7 +647,7 @@ export default function WatchlistPage() {
         ) : (
           <div className="space-y-8">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {paginatedItems.map(({ media, id, isWatched }) => {
+              {paginatedItems.map(({ media, id, isWatched: itemIsWatched }) => {
                 const releaseDate = media.releaseDate || '';
                 const isFuture = releaseDate > todayStr || (media.isUpcoming && releaseDate > todayStr);
                 const daysLeft = getDaysUntilRelease(releaseDate);
@@ -555,7 +691,7 @@ export default function WatchlistPage() {
                         )}
 
                         {/* Watched Status Overlay Badge */}
-                        {isWatched && (
+                        {itemIsWatched && (
                           <div className="absolute top-10 right-2 px-2 py-0.5 rounded bg-emerald-600/90 border border-emerald-400/50 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-md">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Watched</span>
@@ -577,58 +713,119 @@ export default function WatchlistPage() {
                     {/* Actions Section */}
                     <div className="p-3 pt-0">
                       <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-                        {!isFuture ? (
+                        {selectedFriend ? (
+                          /* Friend Watchlist Card Actions: Play, Save to My List, Mark Watched in My List */
                           <>
-                            {/* Play Button */}
-                            <button
-                              onClick={() => playMedia(media)}
-                              className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-white" />
-                              <span>{isWatched ? 'Play Again' : 'Play Now'}</span>
-                            </button>
+                            {!isFuture && (
+                              <button
+                                onClick={() => playMedia(media)}
+                                className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-white" />
+                                <span>Play Now</span>
+                              </button>
+                            )}
 
-                            {/* Toggle Watched & Remove Buttons */}
-                            <div className="flex items-center gap-2">
-                              {isWatched ? (
+                            <div className="flex items-center gap-1.5">
+                              {/* Add / Remove from My Watchlist */}
+                              <button
+                                onClick={() => {
+                                  if (isInWatchlist(media.internalId) && !isWatched(media.internalId)) {
+                                    removeFromWatchlist(media.internalId);
+                                  } else {
+                                    addToWatchlist(media, false);
+                                  }
+                                }}
+                                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer ${
+                                  isInWatchlist(media.internalId) && !isWatched(media.internalId)
+                                    ? 'bg-amber-500/90 border-amber-400 text-slate-950 font-extrabold'
+                                    : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                                }`}
+                                title={isInWatchlist(media.internalId) && !isWatched(media.internalId) ? 'In your Watchlist' : 'Save to My Watchlist'}
+                              >
+                                <Bookmark className="w-3.5 h-3.5" />
+                                <span>{isInWatchlist(media.internalId) && !isWatched(media.internalId) ? 'Saved' : '+ Save'}</span>
+                              </button>
+
+                              {/* Mark Watched in My List (Only for released titles) */}
+                              {!isFuture && (
                                 <button
-                                  onClick={() => markAsUnwatched(id)}
-                                  className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                                  title="Mark as Unwatched"
+                                  onClick={() => {
+                                    if (isWatched(media.internalId)) {
+                                      markAsUnwatched(media.internalId);
+                                    } else {
+                                      addToWatchlist(media, true);
+                                    }
+                                  }}
+                                  className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                                    isWatched(media.internalId)
+                                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
+                                      : 'bg-white/10 border-white/20 text-slate-300 hover:text-white hover:bg-white/20'
+                                  }`}
+                                  title={isWatched(media.internalId) ? 'Marked Watched in My List' : 'Mark Watched in My List'}
                                 >
-                                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-                                  <span>Unwatch</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => markAsWatched(id)}
-                                  className="flex-1 py-1.5 px-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                                  title="Mark as Watched"
-                                >
-                                  <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>Mark Watched</span>
+                                  <CheckCircle2 className="w-4 h-4" />
                                 </button>
                               )}
-
-                              <button
-                                onClick={() => removeFromWatchlist(id)}
-                                className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 rounded-xl text-xs transition-colors cursor-pointer"
-                                title="Remove from Watchlist"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
                             </div>
                           </>
                         ) : (
-                          /* Upcoming Unreleased Item: Single Remove Button Only */
-                          <button
-                            onClick={() => removeFromWatchlist(id)}
-                            className="w-full py-2 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                            title="Remove from Watchlist"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Remove from Watchlist</span>
-                          </button>
+                          /* My Watchlist Card Actions */
+                          <>
+                            {!isFuture ? (
+                              <>
+                                {/* Play Button */}
+                                <button
+                                  onClick={() => playMedia(media)}
+                                  className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-white" />
+                                  <span>{itemIsWatched ? 'Play Again' : 'Play Now'}</span>
+                                </button>
+
+                                {/* Toggle Watched & Remove Buttons */}
+                                <div className="flex items-center gap-2">
+                                  {itemIsWatched ? (
+                                    <button
+                                      onClick={() => markAsUnwatched(id)}
+                                      className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                      title="Mark as Unwatched"
+                                    >
+                                      <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                      <span>Unwatch</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => markAsWatched(id)}
+                                      className="flex-1 py-1.5 px-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                      title="Mark as Watched"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                                      <span>Mark Watched</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => removeFromWatchlist(id)}
+                                    className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 rounded-xl text-xs transition-colors cursor-pointer"
+                                    title="Remove from Watchlist"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              /* Upcoming Unreleased Item: Single Remove Button Only */
+                              <button
+                                onClick={() => removeFromWatchlist(id)}
+                                className="w-full py-2 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                title="Remove from Watchlist"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Remove from Watchlist</span>
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -660,21 +857,37 @@ export default function WatchlistPage() {
                   </button>
 
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            currentPage === page
-                              ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                              : 'bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      const getPages = (current: number, total: number): (number | string)[] => {
+                        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+                        if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+                        if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+                        return [1, '...', current - 1, current, current + 1, '...', total];
+                      };
+
+                      return getPages(currentPage, totalPages).map((page, idx) => {
+                        if (typeof page === 'string') {
+                          return (
+                            <span key={`ellipsis-${idx}`} className="px-2 py-1 text-slate-500 text-xs font-bold select-none">
+                              ...
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              currentPage === page
+                                ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                                : 'bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      });
+                    })()}
                   </div>
 
                   <button
@@ -692,72 +905,6 @@ export default function WatchlistPage() {
         )}
 
       </div>
-
-      {/* Import v1 Data Modal */}
-      {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="glass-panel rounded-3xl max-w-2xl w-full border border-white/10 shadow-2xl overflow-hidden my-8 p-6 md:p-8 space-y-6 relative">
-            <button
-              onClick={() => setIsImportModalOpen(false)}
-              className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                <Upload className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Import Version 1 Data</h3>
-                <p className="text-xs text-slate-400">Paste your JSON data dump of watched, unwatched, or upcoming titles</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-semibold">JSON Format Data Payload</span>
-                <button
-                  onClick={handleLoadSampleJSON}
-                  className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-                >
-                  Load Sample v1 Format
-                </button>
-              </div>
-
-              <textarea
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder='{\n  "watched": [{ "title": "Inception", "releaseYear": 2010 }],\n  "unwatched": [{ "title": "The Dark Knight" }],\n  "upcoming": [{ "title": "Avatar 3", "releaseDate": "2026-12-18" }]\n}'
-                className="w-full h-52 p-4 bg-black/60 border border-white/10 rounded-2xl font-mono text-xs text-amber-300 placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-              />
-
-              {importError && (
-                <div className="p-3 rounded-xl bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-semibold">
-                  {importError}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
-              <button
-                onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImportJSON}
-                disabled={importing || !jsonInput.trim()}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-white font-bold text-xs shadow-lg shadow-amber-600/30 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                <span>{importing ? 'Importing...' : 'Import Movies Now'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

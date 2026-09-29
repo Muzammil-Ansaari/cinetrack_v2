@@ -46,6 +46,8 @@ interface AppContextType {
   authLoading: boolean;
   login: (userData: UserProfile, token?: string) => void;
   logout: () => void;
+  updateUserFriendTag: (newTag: string, tagLastChangedAt?: string | Date) => void;
+  updateUserAvatar: (newAvatarUrl: string) => Promise<boolean>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
@@ -217,6 +219,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Watchlist Methods
   const addToWatchlist = (item: MediaItem, asWatched = false) => {
     let wasAlreadyIn = false;
+    let switchedToUnwatched = false;
 
     setWatchlist((prev) => {
       const existing = prev.find((w) => w.id === item.internalId);
@@ -232,6 +235,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           syncToMongoDB(updated, history);
           return updated;
         }
+
+        if (!asWatched && existing.isWatched) {
+          switchedToUnwatched = true;
+          const updated = prev.map((w) =>
+            w.id === item.internalId
+              ? { ...w, isWatched: false, watchedAt: undefined }
+              : w
+          );
+          localStorage.setItem('cinetrack_watchlist', JSON.stringify(updated));
+          syncToMongoDB(updated, history);
+          return updated;
+        }
+
         return prev;
       }
 
@@ -252,6 +268,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (wasAlreadyIn) {
       if (asWatched) {
         showToast(`Marked "${item.title}" as Watched`, 'success', 'Watched List');
+      } else if (switchedToUnwatched) {
+        showToast(`Moved "${item.title}" to Unwatched Watchlist`, 'info', 'Unwatched List');
       }
     } else {
       if (asWatched) {
@@ -465,6 +483,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast('You have been logged out', 'info', 'Logged Out');
   };
 
+  const updateUserFriendTag = (newTag: string, tagLastChangedAt?: string | Date) => {
+    if (!user) return;
+    const updatedUser = {
+      ...user,
+      friendTag: newTag,
+      tagLastChangedAt: tagLastChangedAt || new Date().toISOString(),
+    };
+    setUser(updatedUser);
+    localStorage.setItem('cinetrack_user', JSON.stringify(updatedUser));
+  };
+
+  const updateUserAvatar = async (newAvatarUrl: string): Promise<boolean> => {
+    if (!user) return false;
+
+    const updatedUser = {
+      ...user,
+      avatar: newAvatarUrl,
+    };
+
+    // Update local state & localStorage immediately
+    setUser(updatedUser);
+    localStorage.setItem('cinetrack_user', JSON.stringify(updatedUser));
+
+    // Persist to MongoDB if token exists
+    try {
+      const token = localStorage.getItem('cinetrack_token');
+      if (token) {
+        const res = await fetch('/api/user/avatar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ avatar: newAvatarUrl }),
+        });
+        if (!res.ok) {
+          console.warn('Avatar update endpoint returned non-ok status');
+        }
+      }
+      showToast('Profile picture updated successfully!', 'success', 'Avatar Changed');
+      return true;
+    } catch (err) {
+      console.error('Failed saving avatar to MongoDB:', err);
+      showToast('Profile picture updated locally', 'info', 'Avatar Updated');
+      return true;
+    }
+  };
+
   const openAuthModal = () => setIsAuthModalOpen(true);
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
@@ -520,6 +586,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         authLoading,
         login,
         logout,
+        updateUserFriendTag,
+        updateUserAvatar,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,

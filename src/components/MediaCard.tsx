@@ -113,14 +113,14 @@ export default function MediaCard({ item }: MediaCardProps) {
           )}
         </div>
 
-        {/* Hover Quick Actions Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 z-20">
-          <div className="space-y-2">
+        {/* Quick Actions Overlay (Always visible on mobile/touch, hover-triggered on desktop) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2.5 sm:p-3 z-20">
+          <div className="space-y-1.5">
             <h4 className="text-sm font-bold text-white line-clamp-1">{item.title}</h4>
-            <p className="text-[11px] text-slate-300 line-clamp-2 leading-snug">{item.description}</p>
+            <p className="text-[11px] text-slate-300 line-clamp-2 leading-snug hidden sm:block">{item.description}</p>
             
             <div className="flex items-center gap-1.5 pt-1">
-              {/* Play / Details Button (compact) */}
+              {/* Play / Details Button */}
               {!isUnreleased ? (
                 <button
                   onClick={handlePlayClick}
@@ -141,27 +141,27 @@ export default function MediaCard({ item }: MediaCardProps) {
                 </button>
               )}
 
-              {/* Watchlist Toggle Button (Unwatched List) */}
+              {/* Watchlist Toggle Button */}
               <button
                 onClick={handleWatchlistClick}
                 className={`p-2 rounded-xl border text-xs transition-all hover:scale-105 cursor-pointer ${
                   inWatchlist && !itemIsWatched
-                    ? 'bg-red-600/60 border-red-500 text-white'
-                    : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                    ? 'bg-red-600/80 border-red-500 text-white'
+                    : 'bg-black/60 border-white/20 text-white hover:bg-white/20'
                 }`}
                 title={inWatchlist && !itemIsWatched ? 'Remove from Watchlist' : 'Add to Unwatched Watchlist'}
               >
                 {inWatchlist && !itemIsWatched ? <Bookmark className="w-3.5 h-3.5 fill-white" /> : <Plus className="w-3.5 h-3.5" />}
               </button>
 
-              {/* Direct Watched Button (Only for released titles) */}
+              {/* Direct Watched Button */}
               {!isUnreleased && (
                 <button
                   onClick={handleWatchedClick}
                   className={`p-2 rounded-xl border text-xs transition-all hover:scale-105 cursor-pointer ${
                     itemIsWatched
                       ? 'bg-emerald-600 border-emerald-400 text-white shadow-md shadow-emerald-600/40'
-                      : 'bg-white/10 border-white/20 text-slate-300 hover:text-white hover:bg-white/20'
+                      : 'bg-black/60 border-white/20 text-slate-300 hover:text-white hover:bg-white/20'
                   }`}
                   title={itemIsWatched ? 'Marked as Watched (Click to unwatch)' : 'Mark directly as Watched'}
                 >
@@ -173,8 +173,8 @@ export default function MediaCard({ item }: MediaCardProps) {
         </div>
       </div>
 
-      {/* Card Footer Title & Formatted Release Date (e.g. 14 Sep 2026) */}
-      <div className="mt-2.5 space-y-0.5 px-0.5 pointer-events-none">
+      {/* Card Footer Title & Formatted Release Date */}
+      <div className="mt-2 space-y-0.5 px-0.5">
         <h3 className="text-sm font-semibold text-slate-200 group-hover:text-white line-clamp-1 transition-colors">
           {item.title}
         </h3>

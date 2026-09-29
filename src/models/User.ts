@@ -38,6 +38,7 @@ export interface IUser extends Document {
   avatar?: string;
   isAdmin?: boolean;
   friendTag?: string;
+  tagLastChangedAt?: Date | null;
   friends: string[];
   friendRequests: IFriendRequest[];
   watchlist: IUserWatchItem[];
@@ -81,6 +82,10 @@ const UserSchema: Schema = new Schema(
       sparse: true,
       unique: true,
     },
+    tagLastChangedAt: {
+      type: Date,
+      default: null,
+    },
     friends: {
       type: Array,
       default: [],
@@ -115,7 +120,8 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-// Prevent re-compilation of model during Next.js hot-reloading
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+// Ensure User model compiles with latest schema fields in Next.js development
+delete (mongoose.models as any).User;
+const User: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
 
 export default User;

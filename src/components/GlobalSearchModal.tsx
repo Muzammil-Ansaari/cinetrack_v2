@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, X, Play, Plus, Check, Star, Film, Tv } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, X, Play, Plus, Check, Star, Film, Tv, ArrowRight, User } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { searchMedia } from '@/lib/tmdb';
-import { MediaItem } from '@/types/cinetrack';
+import { searchMedia, searchActors } from '@/lib/tmdb';
+import { MediaItem, ActorItem } from '@/types/cinetrack';
+import ActorCard from '@/components/ActorCard';
 
 export default function GlobalSearchModal() {
+  const router = useRouter();
   const { isSearchOpen, closeSearch, playMedia, addToWatchlist, removeFromWatchlist, isInWatchlist } = useApp();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MediaItem[]>([]);
@@ -16,12 +19,16 @@ export default function GlobalSearchModal() {
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setLoading(false);
       return;
     }
+    // Immediately clear stale results to prevent previous data flashing
+    setResults([]);
     setLoading(true);
+
     const timer = setTimeout(async () => {
-      const res = await searchMedia(query);
-      setResults(res);
+      const res = await searchMedia(query, 1);
+      setResults(res.items.slice(0, 6));
       setLoading(false);
     }, 200);
 
@@ -46,6 +53,14 @@ export default function GlobalSearchModal() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSearchOpen, closeSearch]);
 
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (query.trim()) {
+      closeSearch();
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  };
+
   if (!isSearchOpen) return null;
 
   return (
@@ -53,31 +68,42 @@ export default function GlobalSearchModal() {
       {/* Modal Container */}
       <div className="relative w-full max-w-3xl glass-panel rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         {/* Search Input Bar */}
-        <div className="flex items-center px-5 py-4 border-b border-white/10 gap-3">
-          <Search className="w-6 h-6 text-red-500 shrink-0" />
+        <form onSubmit={handleSearchSubmit} className="flex items-center px-5 py-4 border-b border-white/10 gap-3">
+          <button
+            type="submit"
+            className="p-1 text-red-500 hover:text-red-400 hover:bg-white/10 rounded-xl transition-all cursor-pointer shrink-0"
+            title="Search all titles"
+          >
+            <Search className="w-6 h-6" />
+          </button>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search movies, TV shows, actors, genres..."
+            placeholder="Search movies, TV shows, actors... (Press Enter to view all)"
             className="w-full bg-transparent text-white placeholder-slate-400 text-lg font-medium outline-none"
             autoFocus
           />
           {query && (
-            <button onClick={() => setQuery('')} className="p-1 text-slate-400 hover:text-white rounded-full">
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="p-1 text-slate-400 hover:text-white rounded-full shrink-0"
+            >
               <X className="w-4 h-4" />
             </button>
           )}
           <button
+            type="button"
             onClick={closeSearch}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold rounded-lg border border-white/10 transition-colors"
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold rounded-lg border border-white/10 transition-colors shrink-0 cursor-pointer"
           >
             ESC
           </button>
-        </div>
+        </form>
 
         {/* Results List */}
-        <div className="overflow-y-auto p-4 space-y-3 flex-1 no-scrollbar">
+        <div className="overflow-y-auto p-4 space-y-3 flex-1 custom-scrollbar">
           {loading && (
             <div className="text-center py-8 text-slate-400 text-sm flex items-center justify-center gap-2">
               <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -110,6 +136,7 @@ export default function GlobalSearchModal() {
             </div>
           )}
 
+          {/* Matching Actor Cards Section */}
           {results.map((item) => {
             const inWatchlist = isInWatchlist(item.internalId);
             return (
@@ -188,6 +215,16 @@ export default function GlobalSearchModal() {
               </div>
             );
           })}
+
+          {query.trim() && (
+            <button
+              onClick={() => handleSearchSubmit()}
+              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-red-600/30 via-red-600/40 to-rose-600/30 hover:from-red-600 hover:to-rose-600 border border-red-500/40 hover:border-red-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg mt-3 group"
+            >
+              <span>View All Results for &quot;{query}&quot;</span>
+              <ArrowRight className="w-4 h-4 text-red-400 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </button>
+          )}
         </div>
       </div>
     </div>
