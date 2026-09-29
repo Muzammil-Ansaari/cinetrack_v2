@@ -145,7 +145,7 @@ export default function WatchlistPage() {
     const genreSet = new Set<string>();
     activeWatchlist.forEach((w) => {
       if (w.media?.genres && Array.isArray(w.media.genres)) {
-        w.media.genres.forEach((g) => {
+        w.media.genres.forEach((g: string) => {
           if (g && typeof g === 'string') {
             genreSet.add(g.trim());
           }
