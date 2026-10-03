@@ -27,11 +27,13 @@ import {
   FileText,
   Users,
   X,
+  List,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/context/ToastContext';
 import { filterItemByTimeframe, TimeframeFilter } from '@/lib/tmdb';
 import { FriendUser } from '@/components/FriendsManager';
+import BulkAddModal from '@/components/BulkAddModal';
 
 export default function WatchlistPage() {
   const { showToast } = useToast();
@@ -58,6 +60,7 @@ export default function WatchlistPage() {
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
 
   // Watchlist Source State (My Watchlist vs Friend's Watchlist)
   const [friendsList, setFriendsList] = useState<FriendUser[]>([]);
@@ -298,6 +301,8 @@ export default function WatchlistPage() {
   }
 
   return (
+    <>
+    {showBulkAdd && <BulkAddModal onClose={() => setShowBulkAdd(false)} />}
     <div className="pt-24 pb-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
@@ -340,6 +345,17 @@ export default function WatchlistPage() {
                 </button>
               )}
             </div>
+            {/* Bulk Add button — only for own watchlist */}
+            {selectedFriendId === 'me' && user && (
+              <button
+                onClick={() => setShowBulkAdd(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white transition-all shadow-lg shadow-violet-600/20 shrink-0 cursor-pointer"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">Bulk Add</span>
+                <span className="sm:hidden">Add List</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -906,5 +922,6 @@ export default function WatchlistPage() {
 
       </div>
     </div>
+    </>
   );
 }
