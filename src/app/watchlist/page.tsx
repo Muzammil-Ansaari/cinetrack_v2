@@ -359,26 +359,26 @@ export default function WatchlistPage() {
           </div>
         </div>
 
-        {/* Watchlist Source Selector Bar (My Watchlist vs Friends' Watchlists) */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5 pr-1">
-              <User className="w-4 h-4 text-red-500" />
-              <span>Watchlist Source:</span>
+        {/* Watchlist Source Selector Bar */}
+        <div className="flex flex-col gap-3 p-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+            <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
+              <User className="w-3.5 h-3.5 text-red-500" />
+              <span className="hidden sm:inline">Source:</span>
             </span>
 
             {/* My Watchlist Option */}
             <button
               onClick={() => setSelectedFriendId('me')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 selectedFriendId === 'me'
                   ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30'
                   : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
               }`}
             >
-              <Bookmark className="w-3.5 h-3.5 fill-current" />
-              <span>My Watchlist</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
+              <Bookmark className="w-3 h-3 fill-current" />
+              <span>Mine</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
                 {watchlist.length}
               </span>
             </button>
@@ -388,39 +388,38 @@ export default function WatchlistPage() {
               <button
                 key={friend.id}
                 onClick={() => setSelectedFriendId(friend.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   selectedFriendId === friend.id
                     ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/30'
                     : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10'
                 }`}
               >
-                {/* eslint-disable-next-img-element */}
                 <img
                   src={friend.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
                   alt={friend.name}
                   className="w-4 h-4 rounded-full object-cover border border-amber-400/50"
                 />
-                <span>{friend.name}&apos;s List</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
+                <span className="truncate max-w-[80px] sm:max-w-none">{friend.name}</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-black/40 text-white">
                   {friend.watchlistCount || friend.watchlist?.length || 0}
                 </span>
               </button>
             ))}
 
             {friendsList.length === 0 && !loadingFriends && (
-              <span className="text-xs text-slate-500 italic pl-1">
-                (Add friends in your Profile to view their watchlists here!)
+              <span className="text-xs text-slate-500 italic pl-1 shrink-0">
+                Add friends to view their lists!
               </span>
             )}
           </div>
 
           {selectedFriend && (
-            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs text-amber-300">
-              <Users className="w-4 h-4 text-amber-400" />
-              <span>Inspecting <strong>{selectedFriend.name}&apos;s</strong> Watchlist</span>
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs text-amber-300 flex-wrap">
+              <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="flex-1 min-w-0">Viewing <strong>{selectedFriend.name}&apos;s</strong> Watchlist</span>
               <button
                 onClick={() => setSelectedFriendId('me')}
-                className="ml-2 text-slate-300 hover:text-white underline text-[11px] font-bold cursor-pointer"
+                className="text-slate-300 hover:text-white underline text-[11px] font-bold cursor-pointer shrink-0"
               >
                 Switch to Mine
               </button>
@@ -429,21 +428,21 @@ export default function WatchlistPage() {
         </div>
 
         {/* Top Level 3 Tabs (Unwatched | Watched | Upcoming) */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl w-full sm:w-auto">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl w-full">
             
             {/* Unwatched Tab */}
             <button
               onClick={() => setActiveMainTab('unwatched')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 activeMainTab === 'unwatched'
                   ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-600/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Clock className="w-4 h-4" />
+              <Clock className="w-3.5 h-3.5 shrink-0" />
               <span>Unwatched</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
                 activeMainTab === 'unwatched' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
                 {filteredTabCounts.unwatched}
@@ -453,15 +452,15 @@ export default function WatchlistPage() {
             {/* Watched Tab */}
             <button
               onClick={() => setActiveMainTab('watched')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 activeMainTab === 'watched'
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>Watched</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
                 activeMainTab === 'watched' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
                 {filteredTabCounts.watched}
@@ -471,15 +470,15 @@ export default function WatchlistPage() {
             {/* Upcoming Tab */}
             <button
               onClick={() => setActiveMainTab('upcoming')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 activeMainTab === 'upcoming'
                   ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-600/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
               <span>Upcoming</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
                 activeMainTab === 'upcoming' ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-300'
               }`}>
                 {filteredTabCounts.upcoming}
@@ -488,120 +487,107 @@ export default function WatchlistPage() {
 
           </div>
 
-          {/* Sub Filters: Media Type Tabs, Genre Filter, Year Filter, Reset */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
-            {/* Left: Media Type Filter Tabs */}
-            <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 p-1 rounded-xl text-xs">
-              <button
-                onClick={() => setMediaTypeFilter('all')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  mediaTypeFilter === 'all' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>All</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
-                  {typeCounts.all}
-                </span>
-              </button>
-              <button
-                onClick={() => setMediaTypeFilter('movie')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  mediaTypeFilter === 'movie' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Film className="w-3.5 h-3.5" />
-                <span>Movies</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
-                  {typeCounts.movies}
-                </span>
-              </button>
-              <button
-                onClick={() => setMediaTypeFilter('tv')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  mediaTypeFilter === 'tv' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Tv className="w-3.5 h-3.5" />
-                <span>TV Shows</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-white/10">
-                  {typeCounts.tv}
-                </span>
-              </button>
-            </div>
-
-            {/* Right: Dynamic Genre & Year Filter Dropdowns */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Dynamic Genre Filter Selector */}
-              <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
-                <Tag className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <select
-                  value={selectedGenre}
-                  onChange={(e) => setSelectedGenre(e.target.value)}
-                  className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
+          {/* Sub Filters: stacks on mobile */}
+          <div className="flex flex-col gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
+            {/* Row 1: Media Type + Reset */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1 bg-black/40 border border-white/10 p-0.5 rounded-xl text-xs">
+                <button
+                  onClick={() => setMediaTypeFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                    mediaTypeFilter === 'all' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
                 >
-                  <option value="all">All Genres ({availableGenres.length})</option>
-                  {availableGenres.map((genre) => (
-                    <option key={genre} value={genre}>
-                      {genre}
-                    </option>
-                  ))}
-                </select>
+                  <span>All</span>
+                  <span className="px-1 py-0.5 rounded text-[10px] font-extrabold bg-white/10">{typeCounts.all}</span>
+                </button>
+                <button
+                  onClick={() => setMediaTypeFilter('movie')}
+                  className={`px-2.5 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                    mediaTypeFilter === 'movie' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Film className="w-3 h-3" />
+                  <span>Movies</span>
+                  <span className="px-1 py-0.5 rounded text-[10px] font-extrabold bg-white/10">{typeCounts.movies}</span>
+                </button>
+                <button
+                  onClick={() => setMediaTypeFilter('tv')}
+                  className={`px-2.5 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                    mediaTypeFilter === 'tv' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Tv className="w-3 h-3" />
+                  <span>TV</span>
+                  <span className="px-1 py-0.5 rounded text-[10px] font-extrabold bg-white/10">{typeCounts.tv}</span>
+                </button>
               </div>
-
-              {/* Timeframe Filter Selector */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
-                  <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                  <select
-                    value={selectedTimeframe}
-                    onChange={(e) => setSelectedTimeframe(e.target.value as TimeframeFilter)}
-                    className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs pr-1 [&>option]:bg-slate-900 [&>option]:text-white"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Added Today</option>
-                    <option value="yesterday">Added Yesterday</option>
-                    <option value="7days">Last 7 Days</option>
-                    <option value="this_month">This Month</option>
-                    <option value="custom">Custom Range...</option>
-                  </select>
-                </div>
-
-                {selectedTimeframe === 'custom' && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] text-slate-400 font-bold uppercase">From:</span>
-                      <input
-                        type="date"
-                        value={customStartDate}
-                        onChange={(e) => setCustomStartDate(e.target.value)}
-                        className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] text-slate-400 font-bold uppercase">To:</span>
-                      <input
-                        type="date"
-                        value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-red-500/50"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Reset Filters Button */}
               {hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:text-red-300 hover:bg-red-500/20 text-xs font-semibold transition-all cursor-pointer"
-                  title="Reset all filters"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:text-red-300 hover:bg-red-500/20 text-xs font-semibold transition-all cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3 h-3" />
                   <span>Reset</span>
                 </button>
               )}
             </div>
+
+            {/* Row 2: Genre + Timeframe */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2.5 py-1.5 rounded-xl text-xs flex-1 min-w-0">
+                <Tag className="w-3 h-3 text-slate-400 shrink-0" />
+                <select
+                  value={selectedGenre}
+                  onChange={(e) => setSelectedGenre(e.target.value)}
+                  className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs w-full [&>option]:bg-slate-900 [&>option]:text-white"
+                >
+                  <option value="all">All Genres ({availableGenres.length})</option>
+                  {availableGenres.map((genre) => (
+                    <option key={genre} value={genre}>{genre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2.5 py-1.5 rounded-xl text-xs flex-1 min-w-0">
+                <Calendar className="w-3 h-3 text-red-500 shrink-0" />
+                <select
+                  value={selectedTimeframe}
+                  onChange={(e) => setSelectedTimeframe(e.target.value as TimeframeFilter)}
+                  className="bg-transparent text-slate-200 focus:outline-none font-semibold cursor-pointer text-xs w-full [&>option]:bg-slate-900 [&>option]:text-white"
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="7days">Last 7 Days</option>
+                  <option value="this_month">This Month</option>
+                  <option value="custom">Custom...</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 3: Custom date range (shown only when custom is selected) */}
+            {selectedTimeframe === 'custom' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[11px] text-slate-400 font-bold uppercase shrink-0">From:</span>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="bg-black/60 border border-white/20 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500/50 w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[11px] text-slate-400 font-bold uppercase shrink-0">To:</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="bg-black/60 border border-white/20 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500/50 w-full"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
