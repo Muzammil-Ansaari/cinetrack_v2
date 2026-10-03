@@ -157,21 +157,21 @@ export default function TVShowDetailsPage() {
               const itemIsWatched = isWatched(show.internalId);
 
               return (
-                <div className="flex items-center gap-1.5 sm:gap-3 pt-2 overflow-x-auto no-scrollbar max-w-full">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 w-full">
                   {!isUnreleased ? (
                     <button
                       onClick={() => {
                         const ep = currentSeason?.episodes[0];
                         playMedia(show, ep);
                       }}
-                      className="flex items-center gap-1.5 sm:gap-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-3.5 py-2 sm:px-7 sm:py-3.5 rounded-full text-xs sm:text-base shadow-xl shadow-red-600/30 hover:scale-105 transition-all cursor-pointer shrink-0"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold px-3 py-2 sm:px-7 sm:py-3.5 rounded-full text-xs sm:text-base shadow-xl shadow-red-600/30 hover:scale-105 transition-all cursor-pointer shrink-0"
                     >
-                      <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white" />
+                      <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white shrink-0" />
                       <span><span className="inline sm:hidden">Play S1E1</span><span className="hidden sm:inline">Watch First Episode</span></span>
                     </button>
                   ) : (
-                    <div className="flex items-center gap-1.5 sm:gap-2.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold px-3.5 py-2 sm:px-7 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md shrink-0">
-                      <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-400" />
+                    <div className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold px-3 py-2 sm:px-7 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md shrink-0">
+                      <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
                       <span>Coming Soon</span>
                     </div>
                   )}
@@ -180,9 +180,9 @@ export default function TVShowDetailsPage() {
                   {show.trailerUrl && (
                     <button
                       onClick={() => setShowTrailer(true)}
-                      className="flex items-center gap-1.5 sm:gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md transition-all hover:scale-105 hover:border-red-500/50 cursor-pointer shrink-0"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md transition-all hover:scale-105 hover:border-red-500/50 cursor-pointer shrink-0"
                     >
-                      <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-red-500 fill-current" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-red-500 fill-current shrink-0" viewBox="0 0 24 24">
                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                       </svg>
                       <span><span className="inline sm:hidden">Trailer</span><span className="hidden sm:inline">Watch Trailer</span></span>
@@ -192,13 +192,13 @@ export default function TVShowDetailsPage() {
                   {/* Add to Watchlist Button */}
                   <button
                     onClick={() => (inWatchlist && !itemIsWatched ? removeFromWatchlist(show.internalId) : addToWatchlist(show, false))}
-                    className={`flex items-center gap-1.5 sm:gap-2 font-medium px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md border transition-all cursor-pointer shrink-0 ${
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 font-medium px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md border transition-all cursor-pointer shrink-0 ${
                       inWatchlist && !itemIsWatched
                         ? 'bg-blue-600/30 border-blue-500 text-blue-300 hover:bg-blue-600/40'
                         : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
                     }`}
                   >
-                    {inWatchlist && !itemIsWatched ? <Check className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-blue-400" /> : <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
+                    {inWatchlist && !itemIsWatched ? <Check className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-blue-400 shrink-0" /> : <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0" />}
                     <span>{inWatchlist && !itemIsWatched ? 'Saved' : 'Watchlist'}</span>
                   </button>
 
@@ -212,14 +212,14 @@ export default function TVShowDetailsPage() {
                           addToWatchlist(show, true);
                         }
                       }}
-                      className={`flex items-center gap-1.5 sm:gap-2 font-bold px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md border transition-all cursor-pointer shrink-0 ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 font-bold px-3 py-2 sm:px-6 sm:py-3.5 rounded-full text-xs sm:text-base backdrop-blur-md border transition-all cursor-pointer shrink-0 ${
                         itemIsWatched
                           ? 'bg-emerald-600/40 border-emerald-500 text-emerald-300 hover:bg-emerald-600/60 shadow-lg shadow-emerald-950/40'
                           : 'bg-emerald-950/50 hover:bg-emerald-900/60 border-emerald-500/50 text-emerald-300 hover:border-emerald-400'
                       }`}
                       title={itemIsWatched ? 'Click to mark as unwatched' : 'Directly mark as watched'}
                     >
-                      {itemIsWatched ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-emerald-400" /> : <Eye className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-emerald-400" />}
+                      {itemIsWatched ? <CheckCircle2 className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-emerald-400 shrink-0" /> : <Eye className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />}
                       <span>{itemIsWatched ? 'Watched' : 'Watched'}</span>
                     </button>
                   )}

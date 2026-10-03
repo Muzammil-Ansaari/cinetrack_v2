@@ -648,7 +648,7 @@ export default function WatchlistPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-6">
               {paginatedItems.map(({ media, id, isWatched: itemIsWatched }) => {
                 const releaseDate = media.releaseDate || '';
                 const isFuture = releaseDate > todayStr || (media.isUpcoming && releaseDate > todayStr);
@@ -684,9 +684,9 @@ export default function WatchlistPage() {
                         {isFuture && (
                           <div className="absolute bottom-2 left-2 right-2 p-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-orange-950/90 border border-amber-500/50 backdrop-blur-md text-amber-200 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 shadow-lg">
                             <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                            <span>
+                            <span className="truncate">
                               {daysLeft !== null && daysLeft > 0
-                                ? `Releasing in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`
+                                ? `In ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`
                                 : `Releasing ${releaseDate}`}
                             </span>
                           </div>
@@ -695,35 +695,35 @@ export default function WatchlistPage() {
                         {/* Watched Status Overlay Badge */}
                         {itemIsWatched && (
                           <div className="absolute top-10 right-2 px-2 py-0.5 rounded bg-emerald-600/90 border border-emerald-400/50 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-md">
-                            <CheckCircle2 className="w-3 h-3" />
+                            <CheckCircle2 className="w-3 h-3 shrink-0" />
                             <span>Watched</span>
                           </div>
                         )}
                       </div>
 
                       {/* Metadata Details */}
-                      <div className="p-3 flex-1">
-                        <h4 className="text-sm font-bold text-white group-hover:text-red-400 transition-colors line-clamp-1">
+                      <div className="p-2.5 sm:p-3 flex-1">
+                        <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-red-400 transition-colors line-clamp-1">
                           {media.title}
                         </h4>
-                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                        <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 line-clamp-1">
                           {media.releaseYear || '2026'} • {media.genres?.[0] || 'Entertainment'}
                         </p>
                       </div>
                     </Link>
 
                     {/* Actions Section */}
-                    <div className="p-3 pt-0">
-                      <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
+                    <div className="p-2 sm:p-3 pt-0">
+                      <div className="flex flex-col gap-1.5 pt-2 border-t border-white/10">
                         {selectedFriend ? (
                           /* Friend Watchlist Card Actions: Play, Save to My List, Mark Watched in My List */
                           <>
                             {!isFuture && (
                               <button
                                 onClick={() => playMedia(media)}
-                                className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+                                className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-1.5 sm:py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
                               >
-                                <Play className="w-3.5 h-3.5 fill-white" />
+                                <Play className="w-3.5 h-3.5 fill-white shrink-0" />
                                 <span>Play Now</span>
                               </button>
                             )}
@@ -738,15 +738,15 @@ export default function WatchlistPage() {
                                     addToWatchlist(media, false);
                                   }
                                 }}
-                                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer ${
+                                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer min-w-0 ${
                                   isInWatchlist(media.internalId) && !isWatched(media.internalId)
                                     ? 'bg-amber-500/90 border-amber-400 text-slate-950 font-extrabold'
                                     : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                                 }`}
                                 title={isInWatchlist(media.internalId) && !isWatched(media.internalId) ? 'In your Watchlist' : 'Save to My Watchlist'}
                               >
-                                <Bookmark className="w-3.5 h-3.5" />
-                                <span>{isInWatchlist(media.internalId) && !isWatched(media.internalId) ? 'Saved' : '+ Save'}</span>
+                                <Bookmark className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">{isInWatchlist(media.internalId) && !isWatched(media.internalId) ? 'Saved' : '+ Save'}</span>
                               </button>
 
                               {/* Mark Watched in My List (Only for released titles) */}
@@ -759,7 +759,7 @@ export default function WatchlistPage() {
                                       addToWatchlist(media, true);
                                     }
                                   }}
-                                  className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                                  className={`p-1.5 rounded-xl border transition-all cursor-pointer shrink-0 ${
                                     isWatched(media.internalId)
                                       ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
                                       : 'bg-white/10 border-white/20 text-slate-300 hover:text-white hover:bg-white/20'
@@ -779,37 +779,37 @@ export default function WatchlistPage() {
                                 {/* Play Button */}
                                 <button
                                   onClick={() => playMedia(media)}
-                                  className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
+                                  className="w-full flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold py-1.5 sm:py-2 rounded-xl text-xs shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer"
                                 >
-                                  <Play className="w-3.5 h-3.5 fill-white" />
-                                  <span>{itemIsWatched ? 'Play Again' : 'Play Now'}</span>
+                                  <Play className="w-3.5 h-3.5 fill-white shrink-0" />
+                                  <span className="truncate">{itemIsWatched ? 'Play Again' : 'Play Now'}</span>
                                 </button>
 
                                 {/* Toggle Watched & Remove Buttons */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                   {itemIsWatched ? (
                                     <button
                                       onClick={() => markAsUnwatched(id)}
-                                      className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                      className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer min-w-0"
                                       title="Mark as Unwatched"
                                     >
-                                      <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-                                      <span>Unwatch</span>
+                                      <EyeOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span className="truncate">Unwatch</span>
                                     </button>
                                   ) : (
                                     <button
                                       onClick={() => markAsWatched(id)}
-                                      className="flex-1 py-1.5 px-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                      className="flex-1 py-1.5 px-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer min-w-0"
                                       title="Mark as Watched"
                                     >
-                                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                                      <span>Mark Watched</span>
+                                      <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                      <span className="truncate">Watched</span>
                                     </button>
                                   )}
 
                                   <button
                                     onClick={() => removeFromWatchlist(id)}
-                                    className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 rounded-xl text-xs transition-colors cursor-pointer"
+                                    className="p-1.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 rounded-xl text-xs transition-colors cursor-pointer shrink-0"
                                     title="Remove from Watchlist"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -820,11 +820,11 @@ export default function WatchlistPage() {
                               /* Upcoming Unreleased Item: Single Remove Button Only */
                               <button
                                 onClick={() => removeFromWatchlist(id)}
-                                className="w-full py-2 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="w-full py-1.5 sm:py-2 bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-300 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                                 title="Remove from Watchlist"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Remove from Watchlist</span>
+                                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">Remove</span>
                               </button>
                             )}
                           </>
